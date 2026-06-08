@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Radeem App - Profile</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/lucide@latest"></script>
+</head>
+<body>
+    <main>
+        <div class="container">
+            <h1>My Profile</h1>
+
+            <div class="profile-header">
+                <div class="profile-avatar" id="profile-avatar">?</div>
+                <h2 class="profile-username" id="profile-username">Loading...</h2>
+                <p class="profile-email" id="profile-email">loading@example.com</p>
+                <p class="profile-join-date" id="profile-join-date">Joined: YYYY-MM-DD</p>
+            </div>
+
+            <div class="profile-stats">
+                <div class="profile-stat-item">
+                    <div class="value" id="stat-coins">0</div>
+                    <div class="label">Coins</div>
+                </div>
+                <div class="profile-stat-item">
+                    <div class="value" id="stat-diamonds">0</div>
+                    <div class="label">Diamonds</div>
+                </div>
+                <div class="profile-stat-item">
+                    <div class="value" id="stat-redeems">0</div>
+                    <div class="label">Total Redeems</div>
+                </div>
+            </div>
+
+            <div class="profile-actions">
+                <button id="edit-profile-btn" class="btn btn-secondary">
+                    <i data-lucide="edit"></i>&nbsp; Edit Username
+                </button>
+                <button id="logout-btn" class="btn btn-primary">
+                    <i data-lucide="log-out"></i>&nbsp; Logout
+                </button>
+            </div>
+
+            <!-- Edit Username Modal -->
+            <div id="edit-username-modal" class="modal" style="display: none;">
+                <div class="modal-content">
+                    <h3>Edit Username</h3>
+                    <div class="form-group">
+                        <label for="new-username-input">New Username</label>
+                        <input type="text" id="new-username-input" placeholder="Enter new username">
+                    </div>
+                    <div class="form-actions" style="flex-direction: row; justify-content: space-between; margin-top: 1rem;">
+                        <button id="save-username-btn" class="btn btn-primary" style="flex: 1; margin-right: 10px;">Save</button>
+                        <button id="cancel-edit-btn" class="btn btn-secondary" style="flex: 1;">Cancel</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <nav class="bottom-nav">
+        <a href="dashboard.html" class="nav-item">
+            <i data-lucide="home"></i>
+            <span>Home</span>
+        </a>
+        <a href="earn.html" class="nav-item">
+            <i data-lucide="megaphone"></i>
+            <span>Earn</span>
+        </a>
+        <a href="mystery-box.html" class="nav-item">
+            <i data-lucide="box"></i>
+            <span>Mystery Box</span>
+        </a>
+        <a href="redeem.html" class="nav-item">
+            <i data-lucide="gift"></i>
+            <span>Redeem</span>
+        </a>
+        <a href="profile.html" class="nav-item active">
+            <i data-lucide="user"></i>
+            <span>Profile</span>
+        </a>
+    </nav>
+
+    <style>
+        /* Modal styles */
+        .modal {
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: var(--card-background);
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            width: 90%;
+            max-width: 400px;
+            box-shadow: var(--shadow-medium);
+            position: relative;
+        }
+
+        .modal-content h3 {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            color: var(--primary-color);
+        }
+    </style>
+
+    <script type="module">
+        import { getCurrentUser, logoutUser } from './auth.js';
+        import { getUserData, getRedeemHistory, updateUserField } from './database.js';
+        import { showToast } from './app.js';
+        import { updateProfile } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            lucide.createIcons();
+
+            const profileAvatar = document.getElementById('profile-avatar');
+            const profileUsername = document.getElementById('profile-username');
+            const profileEmail = document.getElementById('profile-email');
+            const profileJoinDate = document.getElementById('profile-join-date');
+            const statCoins = document.getElementById('stat-coins');
+            const statDiamonds = document.getElementById('stat-diamonds');
+            const statRedeems = document.getElementById('stat-redeems');
+            const logoutBtn = document.getElementById('logout-btn');
+            const editProfileBtn = document.getElementById('edit-profile-btn');
+            const editUsernameModal = document.getElementById('edit-username-modal');
+            const newUsernameInput = document.getElementById('new-username-input');
+            const saveUsernameBtn = document.getElementById('save-username-btn');
+            const cancelEditBtn = document.getElementById('cancel-edit-btn');
+
+            let currentUserID = null;
+
+            const user = await getCurrentUser();
+            if (!user) { return; } // auth.js will redirect if no user
+            currentUserID = user.uid;
+
+            profileEmail.textContent = user.email;
+            profileJoinDate.textContent = `Joined: ${new Date(user.metadata.creationTime).toLocaleDateString()}`;
+
+            if (user.photoURL) {
+                profileAvatar.innerHTML = `<img src="${user.photoURL}" alt="User Avatar">`;
+            } else if (user.displayName) {
+                profileAvatar.textContent = user.displayName.charAt(0).toUpperCase();
+            }
+            profileUsername.textContent = user.displayName || 'Loading...';
+
+            getUserData(currentUserID, (data) => {
+                if (data) {
+                    statCoins.textContent = data.coins;
+                    statDiamonds.textContent = data.diamonds;
+                    profileUsername.textContent = data.username;
+                    if (!user.photoURL) {
+                        profileAvatar.textContent = data.username.charAt(0).toUpperCase();
+                    }
+                }
+            });
+
+            getRedeemHistory(currentUserID, (requests) => {
+                statRedeems.textContent = requests.length;
+            });
+
+            logoutBtn.addEventListener('click', async () => {
+                if (confirm('Are you sure you want to log out?')) {
+                    const result = await logoutUser();
+                    if (!result.success) {
+                        showToast('Logout failed: ' + result.error, 'error');
+                    }
+                }
+            });
+
+            editProfileBtn.addEventListener('click', () => {
+                newUsernameInput.value = profileUsername.textContent;
+                editUsernameModal.style.display = 'flex';
+            });
+
+            cancelEditBtn.addEventListener('click', () => {
+                editUsernameModal.style.display = 'none';
+            });
+
+            saveUsernameBtn.addEventListener('click', async () => {
+                const newUsername = newUsernameInput.value.trim();
+                if (!newUsername) {
+                    showToast('Username cannot be empty', 'error');
+                    return;
+                }
+
+                saveUsernameBtn.disabled = true;
+
+                try {
+                    // Update in Firebase Auth
+                    await updateProfile(user, { displayName: newUsername });
+                    // Update in Realtime Database
+                    await updateUserField(currentUserID, 'username', newUsername);
+
+                    profileUsername.textContent = newUsername;
+                    if (!user.photoURL) {
+                        profileAvatar.textContent = newUsername.charAt(0).toUpperCase();
+                    }
+                    showToast('Username updated successfully!', 'success');
+                    editUsernameModal.style.display = 'none';
+                } catch (error) {
+                    showToast('Failed to update username: ' + error.message, 'error');
+                    console.error('Error updating username:', error);
+                }
+
+                saveUsernameBtn.disabled = false;
+            });
+
+            // Close modal if click outside content
+            editUsernameModal.addEventListener('click', (e) => {
+                if (e.target === editUsernameModal) {
+                    editUsernameModal.style.display = 'none';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
