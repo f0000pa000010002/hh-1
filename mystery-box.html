@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Radeem App - Mystery Box</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/lucide@latest"></script>
+</head>
+<body>
+    <main>
+        <div class="container">
+            <h1>Mystery Box</h1>
+            <p class="text-center">Open a mystery box for <strong>19 Diamonds</strong> and win <strong>190 Coins!</strong></p>
+
+            <div class="balance-card">
+                <div class="balance-item">
+                    <i data-lucide="coins"></i>
+                    <span>Your Coins</span>
+                    <strong id="user-coins">0</strong>
+                </div>
+                <div class="balance-item">
+                    <i data-lucide="gem"></i>
+                    <span>Your Diamonds</span>
+                    <strong id="user-diamonds">0</strong>
+                </div>
+            </div>
+
+            <div class="mystery-box-container">
+                <div class="mystery-box" id="mystery-box">
+                    <i data-lucide="box"></i>
+                    <div class="particles">
+                        <div class="particle"></div>
+                        <div class="particle"></div>
+                        <div class="particle"></div>
+                        <div class="particle"></div>
+                        <div class="particle"></div>
+                    </div>
+                </div>
+                <button id="open-box-btn" class="btn btn-primary" style="width: 100%;">
+                    <i data-lucide="key"></i>&nbsp; Open Mystery Box
+                </button>
+                <div id="mystery-box-reward" class="mystery-box-reward">
+                    <div class="reward-value">+190 Coins!</div>
+                    <div class="reward-message">Congratulations!</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <nav class="bottom-nav">
+        <a href="dashboard.html" class="nav-item">
+            <i data-lucide="home"></i>
+            <span>Home</span>
+        </a>
+        <a href="earn.html" class="nav-item">
+            <i data-lucide="megaphone"></i>
+            <span>Earn</span>
+        </a>
+        <a href="mystery-box.html" class="nav-item active">
+            <i data-lucide="box"></i>
+            <span>Mystery Box</span>
+        </a>
+        <a href="redeem.html" class="nav-item">
+            <i data-lucide="gift"></i>
+            <span>Redeem</span>
+        </a>
+        <a href="profile.html" class="nav-item">
+            <i data-lucide="user"></i>
+            <span>Profile</span>
+        </a>
+    </nav>
+
+    <script type="module">
+        import { getCurrentUser } from './auth.js';
+        import { getUserData, updateUserBalances } from './database.js';
+        import { showToast, updateBalanceDisplay } from './app.js';
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            lucide.createIcons();
+
+            const mysteryBoxElement = document.getElementById('mystery-box');
+            const openBoxBtn = document.getElementById('open-box-btn');
+            const mysteryBoxReward = document.getElementById('mystery-box-reward');
+
+            const MYSTERY_BOX_COST_DIAMONDS = 19;
+            const MYSTERY_BOX_REWARD_COINS = 190;
+
+            let userData = null;
+            let currentUserID = null;
+
+            const user = await getCurrentUser();
+            if (!user) { return; } // auth.js will redirect if no user
+            currentUserID = user.uid;
+
+            getUserData(currentUserID, (data) => {
+                if (data) {
+                    userData = data;
+                    updateBalanceDisplay(data.coins, data.diamonds);
+                }
+            });
+
+            openBoxBtn.addEventListener('click', async () => {
+                if (!userData || openBoxBtn.disabled) return;
+
+                if (userData.diamonds < MYSTERY_BOX_COST_DIAMONDS) {
+                    showToast('Not enough diamonds to open the mystery box!', 'error');
+                    return;
+                }
+
+                openBoxBtn.disabled = true;
+                mysteryBoxReward.classList.remove('active');
+
+                // Play shake animation
+                mysteryBoxElement.classList.add('shake');
+                await new Promise(resolve => setTimeout(resolve, 500)); // Wait for shake
+                mysteryBoxElement.classList.remove('shake');
+
+                // Deduct diamonds and add coins
+                const newDiamonds = userData.diamonds - MYSTERY_BOX_COST_DIAMONDS;
+                const newCoins = userData.coins + MYSTERY_BOX_REWARD_COINS;
+
+                const result = await updateUserBalances(currentUserID, newCoins, newDiamonds);
+
+                if (result.success) {
+                    userData.coins = newCoins;
+                    userData.diamonds = newDiamonds;
+                    updateBalanceDisplay(userData.coins, userData.diamonds);
+
+                    // Play open animation and show reward
+                    mysteryBoxElement.classList.add('open');
+                    await new Promise(resolve => setTimeout(resolve, 800)); // Wait for open animation
+
+                    mysteryBoxReward.classList.add('active');
+                    showToast(`+${MYSTERY_BOX_REWARD_COINS} Coins!`, 'success');
+
+                    // Reset box and hide reward after a delay
+                    setTimeout(() => {
+                        mysteryBoxElement.classList.remove('open');
+                        mysteryBoxReward.classList.remove('active');
+                    }, 3000);
+
+                } else {
+                    showToast('Failed to open mystery box: ' + result.error, 'error');
+                }
+
+                openBoxBtn.disabled = false;
+            });
+        });
+    </script>
+</body>
+</html>
