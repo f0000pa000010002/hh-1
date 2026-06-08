@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Radeem App - Login</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/lucide@latest"></script>
+</head>
+<body>
+    <main>
+        <div class="container">
+            <h1>Radeem App</h1>
+            <h2>Login</h2>
+
+            <div id="auth-message" class="alert" style="display: none;"></div>
+
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="login-email">Email</label>
+                    <input type="email" id="login-email" placeholder="your@email.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" placeholder="********" required>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Login</button>
+                    <button type="button" id="google-login-btn" class="btn btn-google">
+                        <i data-lucide="chrome"></i>&nbsp; Sign In with Google
+                    </button>
+                </div>
+            </form>
+
+            <div class="form-link">
+                <a href="forgot-password.html">Forgot Password?</a>
+            </div>
+            <div class="form-link">
+                Don't have an account? <a href="register.html">Register</a>
+            </div>
+        </div>
+    </main>
+
+    <script type="module">
+        import { loginUser, signInWithGoogle } from './auth.js';
+        import { showToast } from './app.js';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            const loginForm = document.getElementById('login-form');
+            const googleLoginBtn = document.getElementById('google-login-btn');
+            const authMessage = document.getElementById('auth-message');
+
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const email = loginForm['login-email'].value;
+                const password = loginForm['login-password'].value;
+
+                const loginBtn = loginForm.querySelector('button[type="submit"]');
+                loginBtn.disabled = true;
+                authMessage.style.display = 'none';
+
+                const result = await loginUser(email, password);
+                if (result.success) {
+                    showToast('Logged in successfully!', 'success');
+                    // Redirect handled by auth.js onAuthStateChanged listener
+                } else {
+                    authMessage.textContent = result.error;
+                    authMessage.className = 'alert alert-error';
+                    authMessage.style.display = 'block';
+                    showToast(result.error, 'error');
+                }
+                loginBtn.disabled = false;
+            });
+
+            googleLoginBtn.addEventListener('click', async () => {
+                googleLoginBtn.disabled = true;
+                authMessage.style.display = 'none';
+
+                const result = await signInWithGoogle();
+                if (result.success) {
+                    showToast('Signed in with Google!', 'success');
+                    // Redirect handled by auth.js onAuthStateChanged listener
+                } else {
+                    authMessage.textContent = result.error;
+                    authMessage.className = 'alert alert-error';
+                    authMessage.style.display = 'block';
+                    showToast(result.error, 'error');
+                }
+                googleLoginBtn.disabled = false;
+            });
+        });
+    </script>
+</body>
+</html>
