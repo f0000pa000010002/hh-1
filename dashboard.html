@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Radeem App - Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/lucide@latest"></script>
+</head>
+<body>
+    <main>
+        <div class="container">
+            <div class="profile-header-summary">
+                <div class="profile-avatar" id="user-avatar">?</div>
+                <h2 id="user-username">Loading...</h2>
+            </div>
+
+            <div class="balance-card">
+                <div class="balance-item">
+                    <i data-lucide="coins"></i>
+                    <span>Coins</span>
+                    <strong id="user-coins">0</strong>
+                </div>
+                <div class="balance-item">
+                    <i data-lucide="gem"></i>
+                    <span>Diamonds</span>
+                    <strong id="user-diamonds">0</strong>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">Daily Progress</div>
+                <div class="card-content">Complete tasks to earn rewards!</div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">Reward Statistics</div>
+                <div class="card-content">Unlock achievements and track your progress.</div>
+            </div>
+        </div>
+    </main>
+
+    <nav class="bottom-nav">
+        <a href="dashboard.html" class="nav-item active">
+            <i data-lucide="home"></i>
+            <span>Home</span>
+        </a>
+        <a href="earn.html" class="nav-item">
+            <i data-lucide="megaphone"></i>
+            <span>Earn</span>
+        </a>
+        <a href="mystery-box.html" class="nav-item">
+            <i data-lucide="box"></i>
+            <span>Mystery Box</span>
+        </a>
+        <a href="redeem.html" class="nav-item">
+            <i data-lucide="gift"></i>
+            <span>Redeem</span>
+        </a>
+        <a href="profile.html" class="nav-item">
+            <i data-lucide="user"></i>
+            <span>Profile</span>
+        </a>
+    </nav>
+
+    <script type="module">
+        import { getCurrentUser } from './auth.js';
+        import { getUserData } from './database.js';
+        import { updateBalanceDisplay } from './app.js';
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            lucide.createIcons();
+
+            const user = await getCurrentUser();
+            if (!user) { return; } // auth.js will redirect if no user
+
+            const userAvatar = document.getElementById('user-avatar');
+            const userUsername = document.getElementById('user-username');
+
+            // Set initial avatar/username from auth object if available
+            if (user.photoURL) {
+                userAvatar.innerHTML = `<img src="${user.photoURL}" alt="User Avatar">`;
+            } else if (user.displayName) {
+                userAvatar.textContent = user.displayName.charAt(0).toUpperCase();
+            }
+            userUsername.textContent = user.displayName || 'Loading...';
+
+            getUserData(user.uid, (data) => {
+                if (data) {
+                    updateBalanceDisplay(data.coins, data.diamonds);
+                    userUsername.textContent = data.username;
+                    if (!user.photoURL) { // If no photo from Google, use username initial
+                        userAvatar.textContent = data.username.charAt(0).toUpperCase();
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
